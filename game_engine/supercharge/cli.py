@@ -15,7 +15,7 @@ def main() -> None:
         try:
             runtime.stop_all()
         except RuntimeError as exc:
-            print(f"Shutdown completed with errors: {exc}")
+            print(f"Shutdown encountered errors: {exc}")
 
 
 if __name__ == "__main__":
