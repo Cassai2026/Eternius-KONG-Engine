@@ -17,5 +17,16 @@ class ComponentRegistry:
             component.start()
 
     def stop_all(self) -> None:
+        errors: list[tuple[str, Exception]] = []
         for component in self.components.values():
-            component.stop()
+            try:
+                component.stop()
+            except Exception as exc:
+                component_name = type(component).__name__
+                errors.append((component_name, exc))
+
+        if errors:
+            error_details = ", ".join(
+                f"{name}: {error}" for name, error in errors
+            )
+            raise RuntimeError(f"One or more components failed to stop: {error_details}")
