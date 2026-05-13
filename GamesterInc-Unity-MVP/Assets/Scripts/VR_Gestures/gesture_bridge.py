@@ -1,5 +1,6 @@
 ﻿import sqlite3
 import sys
+from os import getenv
 from pathlib import Path
 
 
@@ -8,7 +9,13 @@ def _resolve_repo_root() -> Path:
     for candidate in current.parents:
         if (candidate / ".git").exists():
             return candidate
-    raise RuntimeError("Unable to locate repository root from gesture bridge path")
+    configured_root = getenv("ETERNIUS_REPO_ROOT")
+    if configured_root:
+        return Path(configured_root).resolve()
+    raise RuntimeError(
+        "Unable to locate repository root from gesture bridge path. "
+        "Set ETERNIUS_REPO_ROOT when .git metadata is unavailable."
+    )
 
 
 REPO_ROOT = _resolve_repo_root()
@@ -16,6 +23,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.append(str(REPO_ROOT))
 
 from game_engine.supercharge.world_schema import (
+    DEFAULT_BUILD_MENU_ENTRY,
     ensure_default_build_menu_entry,
     fetch_first_build_menu_item,
 )
@@ -30,7 +38,10 @@ def handle_gesture(gesture_name, db_path="enki_knowledge.db"):
         if gesture_name == "PINCH":
             print("\n[HUD] 💠 SELECTING NEAREST BUILD SITE...")
             ensure_default_build_menu_entry(conn)
-            item = fetch_first_build_menu_item(conn) or "WebRTC Mesh Node"
+            item = (
+                fetch_first_build_menu_item(conn)
+                or DEFAULT_BUILD_MENU_ENTRY["item_name"]
+            )
             print(f"[HUD] 🛠️  ATTACHED TO CURSOR: {item}")
 
         elif gesture_name == "SHIELD":
