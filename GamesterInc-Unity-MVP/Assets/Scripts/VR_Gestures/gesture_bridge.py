@@ -45,7 +45,7 @@ from game_engine.supercharge.world_schema import (
 )
 
 
-def handle_gesture(gesture_name, *, db_path="enki_knowledge.db"):
+def handle_gesture(gesture_name, db_path="enki_knowledge.db"):
     """
     Connects MediaPipe hand signals to the Eternius Game World.
     """

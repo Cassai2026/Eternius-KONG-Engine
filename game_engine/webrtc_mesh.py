@@ -6,26 +6,25 @@ from pathlib import Path
 MIN_REPO_MARKERS = 2
 
 
+def _looks_like_repo_root(candidate: Path) -> bool:
+    markers = (
+        (candidate / "master_config.yaml").exists(),
+        (candidate / "README.md").exists(),
+        (candidate / "game_engine").is_dir(),
+    )
+    return sum(markers) >= MIN_REPO_MARKERS
+
+
 def _resolve_repo_root() -> Path:
     current = Path(__file__).resolve()
     for candidate in current.parents:
-        markers = (
-            (candidate / "master_config.yaml").exists(),
-            (candidate / "README.md").exists(),
-            (candidate / "game_engine").is_dir(),
-        )
-        if sum(markers) >= MIN_REPO_MARKERS:
+        if _looks_like_repo_root(candidate):
             return candidate
 
     configured_root = getenv("ETERNIUS_REPO_ROOT")
     if configured_root:
         resolved_root = Path(configured_root).resolve()
-        markers = (
-            (resolved_root / "master_config.yaml").exists(),
-            (resolved_root / "README.md").exists(),
-            (resolved_root / "game_engine").is_dir(),
-        )
-        if sum(markers) >= MIN_REPO_MARKERS:
+        if _looks_like_repo_root(resolved_root):
             return resolved_root
 
     raise RuntimeError(
