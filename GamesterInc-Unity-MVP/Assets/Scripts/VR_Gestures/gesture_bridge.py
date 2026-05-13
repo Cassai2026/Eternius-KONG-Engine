@@ -5,12 +5,17 @@ from pathlib import Path
 
 
 def _looks_like_repo_root(candidate: Path) -> bool:
-    return (candidate / "master_config.yaml").exists() and (
-        candidate / "game_engine"
-    ).is_dir()
+    markers = (
+        (candidate / "master_config.yaml").exists(),
+        (candidate / "README.md").exists(),
+        (candidate / "game_engine").is_dir(),
+    )
+    return sum(markers) >= 2
 
 
 def _resolve_repo_root() -> Path:
+    """Find the project root using multiple repo markers or ETERNIUS_REPO_ROOT."""
+
     current = Path(__file__).resolve()
     for candidate in current.parents:
         if (candidate / ".git").exists() and _looks_like_repo_root(candidate):
@@ -37,7 +42,7 @@ from game_engine.supercharge.world_schema import (
 )
 
 
-def handle_gesture(gesture_name, db_path="enki_knowledge.db"):
+def handle_gesture(gesture_name, *, db_path="enki_knowledge.db"):
     """
     Connects MediaPipe hand signals to the Eternius Game World.
     """

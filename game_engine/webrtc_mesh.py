@@ -1,15 +1,15 @@
 ﻿import sqlite3
+import sys
+from pathlib import Path
 
-try:
-    from game_engine.supercharge.world_schema import (
-        DEFAULT_BUILD_MENU_ENTRY,
-        ensure_default_build_menu_entry,
-    )
-except ModuleNotFoundError:
-    from supercharge.world_schema import (  # type: ignore[no-redef]
-        DEFAULT_BUILD_MENU_ENTRY,
-        ensure_default_build_menu_entry,
-    )
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.append(str(REPO_ROOT))
+
+from game_engine.supercharge.world_schema import (
+    DEFAULT_BUILD_MENU_ENTRY,
+    ensure_default_build_menu_entry,
+)
 
 
 def init_webrtc_mesh(db_path: str = "enki_knowledge.db") -> dict[str, str]:
