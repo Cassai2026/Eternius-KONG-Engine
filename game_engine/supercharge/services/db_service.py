@@ -6,9 +6,17 @@ from ..world_schema import ensure_world_schema
 
 
 class DatabaseService:
-    def __init__(self, db_path: str, enable_concurrent_access: bool = False) -> None:
+    def __init__(
+        self,
+        db_path: str,
+        enable_concurrent_access: bool = False,
+        busy_timeout_ms: int = 5000,
+        enable_wal: bool = True,
+    ) -> None:
         self.db_path = db_path
         self.enable_concurrent_access = enable_concurrent_access
+        self.busy_timeout_ms = busy_timeout_ms
+        self.enable_wal = enable_wal
         self.connection: sqlite3.Connection | None = None
 
     def start(self) -> None:
@@ -16,7 +24,13 @@ class DatabaseService:
             self.db_path,
             check_same_thread=not self.enable_concurrent_access,
         )
+        self.connection.execute("PRAGMA foreign_keys = ON")
+        self.connection.execute(f"PRAGMA busy_timeout = {self.busy_timeout_ms}")
+        self.connection.execute("PRAGMA synchronous = NORMAL")
+        if self.enable_wal:
+            self.connection.execute("PRAGMA journal_mode = WAL")
         ensure_world_schema(self.connection)
+        self.connection.commit()
 
     def stop(self) -> None:
         if self.connection is not None:
