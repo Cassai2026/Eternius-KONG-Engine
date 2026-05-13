@@ -3,14 +3,30 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
+import ssl
 from typing import Any
 from urllib import error, request
+
+LOGGER = logging.getLogger(__name__)
+DEFAULT_VERTEX_MODEL = "gemini-2.0-flash-001"
+DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
+DEFAULT_LOCAL_MODEL = "deterministic-edge-briefing"
+DEFAULT_VERTEX_LOCATION = "global"
+DEFAULT_TEMPERATURE = 0.2
+DEFAULT_MAX_OUTPUT_TOKENS = 256
+HEART_RATE_RISK_FLOOR = 85.0
+COGNITIVE_LOAD_RISK_FLOOR = 70.0
+HAZARD_RISK_WEIGHT = 25.0
+MEDIUM_RISK_THRESHOLD = 20.0
+HIGH_RISK_THRESHOLD = 60.0
 
 
 class EnterpriseAIService:
     def __init__(self, timeout_seconds: float = 10.0) -> None:
         self.timeout_seconds = timeout_seconds
+        self.ssl_context = ssl.create_default_context()
         self.online = False
 
     def start(self) -> None:
@@ -27,7 +43,7 @@ class EnterpriseAIService:
             "model": model,
             "enterprise_ready": provider != "local_fallback",
             "google_cloud_project": os.getenv("GOOGLE_CLOUD_PROJECT", ""),
-            "google_cloud_location": os.getenv("GOOGLE_CLOUD_LOCATION", "global"),
+            "google_cloud_location": os.getenv("GOOGLE_CLOUD_LOCATION", DEFAULT_VERTEX_LOCATION),
         }
 
     def generate_enterprise_briefing(
@@ -64,7 +80,7 @@ class EnterpriseAIService:
                 recommended_actions=recommended_actions,
             )
             provider = "local_fallback"
-            model = "deterministic-edge-briefing"
+            model = DEFAULT_LOCAL_MODEL
 
         return {
             "provider": provider,
@@ -80,11 +96,11 @@ class EnterpriseAIService:
         if os.getenv("GOOGLE_CLOUD_PROJECT") and os.getenv("GOOGLE_CLOUD_ACCESS_TOKEN"):
             return (
                 "google_vertex_ai",
-                os.getenv("GOOGLE_CLOUD_MODEL", "gemini-2.0-flash-001"),
+                os.getenv("GOOGLE_CLOUD_MODEL", DEFAULT_VERTEX_MODEL),
             )
         if os.getenv("GEMINI_API_KEY"):
-            return ("google_gemini_api", os.getenv("GEMINI_MODEL", "gemini-2.0-flash"))
-        return ("local_fallback", "deterministic-edge-briefing")
+            return ("google_gemini_api", os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL))
+        return ("local_fallback", DEFAULT_LOCAL_MODEL)
 
     def _build_prompt(
         self,
@@ -123,8 +139,8 @@ class EnterpriseAIService:
         if not project or not access_token:
             return None
 
-        location = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
-        model = os.getenv("GOOGLE_CLOUD_MODEL", "gemini-2.0-flash-001")
+        location = os.getenv("GOOGLE_CLOUD_LOCATION", DEFAULT_VERTEX_LOCATION)
+        model = os.getenv("GOOGLE_CLOUD_MODEL", DEFAULT_VERTEX_MODEL)
         endpoint = (
             "https://aiplatform.googleapis.com/v1/projects/"
             f"{project}/locations/{location}/publishers/google/models/{model}:generateContent"
@@ -135,26 +151,45 @@ class EnterpriseAIService:
         }
         payload = {
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0.2, "maxOutputTokens": 256},
+            "generationConfig": {
+                "temperature": DEFAULT_TEMPERATURE,
+                "maxOutputTokens": DEFAULT_MAX_OUTPUT_TOKENS,
+            },
         }
-        return self._post_for_summary(endpoint=endpoint, headers=headers, payload=payload)
+        return self._post_for_summary(
+            endpoint=endpoint,
+            headers=headers,
+            payload=payload,
+            provider_name="google_vertex_ai",
+        )
 
     def _request_gemini_summary(self, prompt: str) -> str | None:
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             return None
 
-        model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+        model = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
         endpoint = (
             "https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{model}:generateContent?key={api_key}"
+            f"{model}:generateContent"
         )
-        headers = {"Content-Type": "application/json"}
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": api_key,
+        }
         payload = {
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0.2, "maxOutputTokens": 256},
+            "generationConfig": {
+                "temperature": DEFAULT_TEMPERATURE,
+                "maxOutputTokens": DEFAULT_MAX_OUTPUT_TOKENS,
+            },
         }
-        return self._post_for_summary(endpoint=endpoint, headers=headers, payload=payload)
+        return self._post_for_summary(
+            endpoint=endpoint,
+            headers=headers,
+            payload=payload,
+            provider_name="google_gemini_api",
+        )
 
     def _post_for_summary(
         self,
@@ -162,6 +197,7 @@ class EnterpriseAIService:
         endpoint: str,
         headers: dict[str, str],
         payload: dict[str, Any],
+        provider_name: str,
     ) -> str | None:
         encoded_payload = json.dumps(payload).encode("utf-8")
         http_request = request.Request(
@@ -171,9 +207,23 @@ class EnterpriseAIService:
             method="POST",
         )
         try:
-            with request.urlopen(http_request, timeout=self.timeout_seconds) as response:
+            with request.urlopen(
+                http_request,
+                timeout=self.timeout_seconds,
+                context=self.ssl_context,
+            ) as response:
                 response_payload = json.loads(response.read().decode("utf-8"))
-        except (error.HTTPError, error.URLError, TimeoutError, json.JSONDecodeError):
+        except error.HTTPError as exc:
+            LOGGER.warning("%s request failed with HTTP %s", provider_name, exc.code)
+            return None
+        except error.URLError as exc:
+            LOGGER.warning("%s request failed with network error: %s", provider_name, exc.reason)
+            return None
+        except TimeoutError:
+            LOGGER.warning("%s request timed out", provider_name)
+            return None
+        except json.JSONDecodeError:
+            LOGGER.warning("%s returned malformed JSON", provider_name)
             return None
 
         return self._extract_summary_text(response_payload)
@@ -198,10 +248,14 @@ class EnterpriseAIService:
         heart_rate = float(telemetry.get("heart_rate", 60))
         hazards = float(telemetry.get("hazards_in_view", 0))
         cognitive_load = float(telemetry.get("cognitive_load", 0.0))
-        risk_score = hazards * 25 + max(heart_rate - 85, 0) + max(cognitive_load - 70, 0)
-        if risk_score >= 60:
+        risk_score = (
+            hazards * HAZARD_RISK_WEIGHT
+            + max(heart_rate - HEART_RATE_RISK_FLOOR, 0)
+            + max(cognitive_load - COGNITIVE_LOAD_RISK_FLOOR, 0)
+        )
+        if risk_score >= HIGH_RISK_THRESHOLD:
             return "high"
-        if risk_score >= 20:
+        if risk_score >= MEDIUM_RISK_THRESHOLD:
             return "medium"
         return "low"
 

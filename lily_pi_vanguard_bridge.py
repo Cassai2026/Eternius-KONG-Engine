@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, WebSocket
@@ -5,8 +6,19 @@ from pydantic import BaseModel, Field
 
 from game_engine.supercharge.services.enterprise_ai_service import EnterpriseAIService
 
-app = FastAPI(title="Enki-AI Sovereign Vanguard Bridge", version="10.48")
 enterprise_ai = EnterpriseAIService()
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    enterprise_ai.start()
+    try:
+        yield
+    finally:
+        enterprise_ai.stop()
+
+
+app = FastAPI(title="Enki-AI Sovereign Vanguard Bridge", version="10.48", lifespan=lifespan)
 
 
 class EnterpriseBriefingRequest(BaseModel):
@@ -24,17 +36,6 @@ class EnterpriseBriefingRequest(BaseModel):
     hazards_in_view: int = Field(default=0, ge=0, le=100)
     cognitive_load: float = Field(default=0.0, ge=0.0, le=100.0)
     constraints: list[str] = Field(default_factory=list, max_items=8)
-
-
-@app.on_event("startup")
-async def startup_event() -> None:
-    enterprise_ai.start()
-
-
-@app.on_event("shutdown")
-async def shutdown_event() -> None:
-    enterprise_ai.stop()
-
 
 @app.get("/enterprise/status")
 async def enterprise_status() -> dict[str, Any]:
