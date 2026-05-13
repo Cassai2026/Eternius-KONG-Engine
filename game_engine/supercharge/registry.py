@@ -1,14 +1,13 @@
 """Simple registry for runtime components."""
 
 from dataclasses import dataclass, field
-from typing import Dict
 
 from .types import Lifecycle
 
 
 @dataclass
 class ComponentRegistry:
-    components: Dict[str, Lifecycle] = field(default_factory=dict)
+    components: dict[str, Lifecycle] = field(default_factory=dict)
 
     def register(self, name: str, component: Lifecycle) -> None:
         self.components[name] = component

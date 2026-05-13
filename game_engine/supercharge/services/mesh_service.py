@@ -8,4 +8,4 @@ class MeshService:
         init_webrtc_mesh()
 
     def stop(self) -> None:
-        return None
+        pass
