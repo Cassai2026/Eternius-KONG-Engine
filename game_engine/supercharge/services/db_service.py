@@ -13,9 +13,13 @@ class DatabaseService:
         busy_timeout_ms: int = 5000,
         enable_wal: bool = True,
     ) -> None:
+        parsed_timeout_ms = int(busy_timeout_ms)
+        if parsed_timeout_ms < 0:
+            raise ValueError("busy_timeout_ms must be >= 0")
+
         self.db_path = db_path
         self.enable_concurrent_access = enable_concurrent_access
-        self.busy_timeout_ms = busy_timeout_ms
+        self.busy_timeout_ms = parsed_timeout_ms
         self.enable_wal = enable_wal
         self.connection: sqlite3.Connection | None = None
 

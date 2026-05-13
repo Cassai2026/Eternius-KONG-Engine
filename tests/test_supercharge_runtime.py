@@ -54,6 +54,10 @@ class SuperchargeRuntimeTests(unittest.TestCase):
         self.assertEqual(snapshot["inactive"], False)
         self.assertIsNone(snapshot["database"])
 
+    def test_database_service_rejects_negative_busy_timeout(self) -> None:
+        with self.assertRaises(ValueError):
+            DatabaseService(":memory:", busy_timeout_ms=-1)
+
 
 if __name__ == "__main__":
     unittest.main()

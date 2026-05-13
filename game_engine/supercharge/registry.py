@@ -1,8 +1,11 @@
 """Simple registry for runtime components."""
 
 from dataclasses import dataclass, field
+import logging
 
 from .types import Lifecycle
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass
@@ -49,11 +52,13 @@ class ComponentRegistry:
     def _stop_started_components(
         self, started_components: list[tuple[str, Lifecycle]]
     ) -> None:
-        for _, component in reversed(started_components):
+        for component_name, component in reversed(started_components):
             try:
                 component.stop()
             except Exception:
-                continue
+                LOGGER.exception(
+                    "Rollback stop failed for component '%s'", component_name
+                )
 
     def _resolve_component_online_state(self, component: Lifecycle) -> bool | None:
         online_state = getattr(component, "online", None)
