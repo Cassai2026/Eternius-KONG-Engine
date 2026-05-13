@@ -18,11 +18,10 @@ class ComponentRegistry:
 
     def stop_all(self) -> None:
         errors: list[tuple[str, Exception]] = []
-        for component in self.components.values():
+        for component_name, component in self.components.items():
             try:
                 component.stop()
             except Exception as exc:
-                component_name = type(component).__name__
                 errors.append((component_name, exc))
 
         if errors:
