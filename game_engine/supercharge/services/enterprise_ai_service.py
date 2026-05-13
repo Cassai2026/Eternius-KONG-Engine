@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import ssl
+from hashlib import sha256
 from typing import Any
 from urllib import error, request
 
@@ -36,12 +37,15 @@ class EnterpriseAIService:
         self.online = False
 
     def provider_status(self) -> dict[str, Any]:
-        provider, model = self._resolve_provider()
+        google_provider, google_model = self._resolve_google_provider()
         return {
             "online": self.online,
-            "provider": provider,
-            "model": model,
-            "enterprise_ready": provider != "local_fallback",
+            "provider": "local_fallback",
+            "model": DEFAULT_LOCAL_MODEL,
+            "enterprise_ready": False,
+            "google_available": google_provider is not None,
+            "google_provider": google_provider,
+            "google_model": google_model,
             "google_cloud_project": os.getenv("GOOGLE_CLOUD_PROJECT", ""),
             "google_cloud_location": os.getenv("GOOGLE_CLOUD_LOCATION", DEFAULT_VERTEX_LOCATION),
         }
@@ -53,6 +57,7 @@ class EnterpriseAIService:
         mission_context: str,
         telemetry: dict[str, Any],
         constraints: list[str] | None = None,
+        use_google_enterprise: bool = False,
     ) -> dict[str, Any]:
         active_constraints = [constraint.strip() for constraint in constraints or [] if constraint.strip()]
         risk_level = self._compute_risk_level(telemetry)
@@ -62,25 +67,32 @@ class EnterpriseAIService:
             telemetry=telemetry,
             risk_level=risk_level,
         )
-        provider, model = self._resolve_provider()
-        prompt = self._build_prompt(
+        summary = self._build_local_summary(
             objective=objective,
             mission_context=mission_context,
-            telemetry=telemetry,
-            constraints=active_constraints,
             risk_level=risk_level,
             recommended_actions=recommended_actions,
         )
-        summary = self._request_google_summary(prompt)
-        if not summary:
-            summary = self._build_local_summary(
-                objective=objective,
-                mission_context=mission_context,
-                risk_level=risk_level,
-                recommended_actions=recommended_actions,
-            )
-            provider = "local_fallback"
-            model = DEFAULT_LOCAL_MODEL
+        provider = "local_fallback"
+        model = DEFAULT_LOCAL_MODEL
+
+        if use_google_enterprise:
+            google_provider, google_model = self._resolve_google_provider()
+            if google_provider and google_model:
+                prompt = self._build_prompt(
+                    objective=objective,
+                    mission_context=mission_context,
+                    telemetry=telemetry,
+                    constraints=active_constraints,
+                    risk_level=risk_level,
+                    recommended_actions=recommended_actions,
+                    local_summary=summary,
+                )
+                google_summary = self._request_google_summary(prompt)
+                if google_summary:
+                    summary = google_summary
+                    provider = google_provider
+                    model = google_model
 
         return {
             "provider": provider,
@@ -92,7 +104,7 @@ class EnterpriseAIService:
             "telemetry_snapshot": telemetry,
         }
 
-    def _resolve_provider(self) -> tuple[str, str]:
+    def _resolve_google_provider(self) -> tuple[str | None, str | None]:
         if os.getenv("GOOGLE_CLOUD_PROJECT") and os.getenv("GOOGLE_CLOUD_ACCESS_TOKEN"):
             return (
                 "google_vertex_ai",
@@ -100,7 +112,7 @@ class EnterpriseAIService:
             )
         if os.getenv("GEMINI_API_KEY"):
             return ("google_gemini_api", os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL))
-        return ("local_fallback", DEFAULT_LOCAL_MODEL)
+        return (None, None)
 
     def _build_prompt(
         self,
@@ -111,19 +123,22 @@ class EnterpriseAIService:
         constraints: list[str],
         risk_level: str,
         recommended_actions: list[str],
+        local_summary: str,
     ) -> str:
+        telemetry_profile = self._build_telemetry_profile(telemetry)
         payload = {
             "objective": objective,
             "mission_context": mission_context,
             "risk_level": risk_level,
-            "telemetry": telemetry,
+            "local_summary": local_summary,
+            "telemetry_profile": telemetry_profile,
             "constraints": constraints,
             "recommended_actions": recommended_actions,
         }
         return (
             "You are an enterprise operations copilot for the Eternius KONG Engine. "
             "Write a concise executive briefing in 2-4 sentences. Focus on field safety, "
-            "edge resilience, and next actions. Avoid markdown.\n"
+            "edge resilience, and next actions. Avoid markdown. Never ask for raw telemetry.\n"
             f"Payload: {json.dumps(payload, sort_keys=True)}"
         )
 
@@ -243,6 +258,39 @@ class EnterpriseAIService:
                 if isinstance(text, str) and text.strip():
                     return text.strip()
         return None
+
+    def _build_telemetry_profile(self, telemetry: dict[str, Any]) -> dict[str, str]:
+        payload = json.dumps(telemetry, sort_keys=True).encode("utf-8")
+        heart_rate = float(telemetry.get("heart_rate", 60))
+        hazards = float(telemetry.get("hazards_in_view", 0))
+        cognitive_load = float(telemetry.get("cognitive_load", 0.0))
+        return {
+            "heart_rate_band": self._band_heart_rate(heart_rate),
+            "hazard_band": self._band_hazards(hazards),
+            "cognitive_load_band": self._band_cognitive_load(cognitive_load),
+            "telemetry_fingerprint": sha256(payload).hexdigest()[:16],
+        }
+
+    def _band_heart_rate(self, heart_rate: float) -> str:
+        if heart_rate >= 110:
+            return "critical"
+        if heart_rate >= HEART_RATE_RISK_FLOOR:
+            return "elevated"
+        return "stable"
+
+    def _band_hazards(self, hazards: float) -> str:
+        if hazards >= 3:
+            return "dense"
+        if hazards > 0:
+            return "present"
+        return "clear"
+
+    def _band_cognitive_load(self, cognitive_load: float) -> str:
+        if cognitive_load >= 85:
+            return "overloaded"
+        if cognitive_load >= COGNITIVE_LOAD_RISK_FLOOR:
+            return "elevated"
+        return "stable"
 
     def _compute_risk_level(self, telemetry: dict[str, Any]) -> str:
         heart_rate = float(telemetry.get("heart_rate", 60))

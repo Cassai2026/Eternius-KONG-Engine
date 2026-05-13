@@ -36,6 +36,7 @@ class EnterpriseBriefingRequest(BaseModel):
     hazards_in_view: int = Field(default=0, ge=0, le=100)
     cognitive_load: float = Field(default=0.0, ge=0.0, le=100.0)
     constraints: list[str] = Field(default_factory=list, max_items=8)
+    use_google_enterprise: bool = False
 
 @app.get("/enterprise/status")
 async def enterprise_status() -> dict[str, Any]:
@@ -54,6 +55,7 @@ async def enterprise_briefing(payload: EnterpriseBriefingRequest) -> dict[str, A
         mission_context=payload.mission_context,
         telemetry=telemetry,
         constraints=payload.constraints,
+        use_google_enterprise=payload.use_google_enterprise,
     )
 
 
