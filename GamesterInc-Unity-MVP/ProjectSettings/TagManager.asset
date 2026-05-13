@@ -1,0 +1,97 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!78 &1
+TagManager:
+  serializedVersion: 2
+  tags:
+  - Pipe
+  - respawnPoint
+  - Enemy
+  - Collectible
+  - arrow
+  - CoinCounter
+  - Pets
+  - pickUp
+  - station
+  - interact
+  - NPC
+  - AchievmentList
+  - SmokerNPC
+  - HardHatNPC
+  - Fire
+  layers:
+  - Default
+  - TransparentFX
+  - Ignore Raycast
+  - Player
+  - Water
+  - UI
+  - Ground
+  - Pipe
+  - Minimap
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  m_SortingLayers:
+  - name: Default
+    uniqueID: 0
+    locked: 0
+  - name: Arrow
+    uniqueID: 2026657043
+    locked: 0
+  - name: Enemy
+    uniqueID: 167854059
+    locked: 0
+  - name: House + Nature
+    uniqueID: 1981440985
+    locked: 0
+  - name: Pipe
+    uniqueID: 950236697
+    locked: 0
+  - name: Ground
+    uniqueID: 184978683
+    locked: 0
+  - name: Water
+    uniqueID: 2903958557
+    locked: 0
+  - name: Player
+    uniqueID: 2956750021
+    locked: 0
+  - name: Bushes
+    uniqueID: 1638772505
+    locked: 0
+  - name: Tree
+    uniqueID: 2424447219
+    locked: 0
+  - name: UI
+    uniqueID: 1892287473
+    locked: 0
+  - name: Minimap
+    uniqueID: 507599087
+    locked: 0
+  - name: Character
+    uniqueID: 3615329155
+    locked: 0
+  - name: Pets
+    uniqueID: 3710246409
+    locked: 0

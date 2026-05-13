@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CassAI: Sovereign Matrix 3D</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: monospace; color: #0f0; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #0f0;
+            padding: 15px;
+            box-shadow: 0 0 10px #0f0;
+        }
+        h1 { margin: 0 0 10px 0; font-size: 1.2rem; text-transform: uppercase; }
+        p { margin: 5px 0; font-size: 0.9rem; }
+        .controls { color: #aaa; margin-top: 15px; font-size: 0.8rem; }
+        .highlight { color: #fff; font-weight: bold; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <h1>[NODE 29] Sovereign Engine</h1>
+        <p>Status: <span class="highlight">ONLINE - NO LAG</span></p>
+        <p>Velocity: <span id="velocity-display">Static (1.0x)</span></p>
+        <p>Biological ROI: <span id="broi-display">Neutral</span></p>
+        
+        <div class="controls">
+            [W, A, S, D] to Move<br>
+            [SPACE] to Elevate to the Sovereign Spine<br>
+            [SHIFT] to Drop to the Static Grid
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script>
+        // 1. SCENE SETUP
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x000000, 0.015);
+
+        // 2. CAMERA
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2, 10);
+
+        // 3. RENDERER
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // 4. THE STATIC GRID (The 2D Linear System)
+        const gridHelper = new THREE.GridHelper(200, 100, 0x333333, 0x111111);
+        gridHelper.position.y = 0;
+        scene.add(gridHelper);
+
+        // 5. THE SOVEREIGN SPINE (Elevated 3D Track)
+        const spineGeometry = new THREE.BoxGeometry(4, 0.5, 200);
+        const spineMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x00ff00, 
+            wireframe: true, 
+            transparent: true, 
+            opacity: 0.3 
+        });
+        const spine = new THREE.Mesh(spineGeometry, spineMaterial);
+        spine.position.set(0, 5, 0); // Elevated 5 units up
+        scene.add(spine);
+
+        // Add some glowing "Nodes" along the spine
+        const nodeGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+        const nodeMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        for(let i = -90; i < 100; i += 20) {
+            const node = new THREE.Mesh(nodeGeometry, nodeMaterial);
+            node.position.set(0, 5, i);
+            scene.add(node);
+        }
+
+        // 6. THE ANIMUS (The Player)
+        const animusGeometry = new THREE.BoxGeometry(1, 1, 1);
+        const animusMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff });
+        const animus = new THREE.Mesh(animusGeometry, animusMaterial);
+        animus.position.y = 0.5; // Start on the grid
+        scene.add(animus);
+
+        // 7. LIGHTING
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        // 8. MOVEMENT LOGIC (The Sloth vs Sovereign Velocity)
+        const keys = { w: false, a: false, s: false, d: false, space: false, shift: false };
+        
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'w') keys.w = true;
+            if (e.key === 'a') keys.a = true;
+            if (e.key === 's') keys.s = true;
+            if (e.key === 'd') keys.d = true;
+            if (e.key === ' ') keys.space = true;
+            if (e.key === 'Shift') keys.shift = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'w') keys.w = false;
+            if (e.key === 'a') keys.a = false;
+            if (e.key === 's') keys.s = false;
+            if (e.key === 'd') keys.d = false;
+            if (e.key === ' ') keys.space = false;
+            if (e.key === 'Shift') keys.shift = false;
+        });
+
+        // UI Elements
+        const velocityDisplay = document.getElementById('velocity-display');
+        const broiDisplay = document.getElementById('broi-display');
+
+        // 9. ANIMATION LOOP
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Determine if on Grid (y ~0.5) or Spine (y ~5.5)
+            let currentSpeed = 0.1; // Default slow "Sloth" speed on the grid
+            let isOnSpine = false;
+
+            if (animus.position.y > 4) {
+                // The Sovereign Override: 10x Velocity
+                currentSpeed = 0.5;
+                isOnSpine = true;
+                velocityDisplay.innerText = "Sovereign Pulse (10x)";
+                velocityDisplay.style.color = "#0f0";
+                broiDisplay.innerText = "Positive (Ascending)";
+                broiDisplay.style.color = "#0f0";
+                animusMaterial.color.setHex(0x00ff00); // Glow green
+            } else {
+                // The Static Grid
+                velocityDisplay.innerText = "Static Friction (1x)";
+                velocityDisplay.style.color = "#ff0000";
+                broiDisplay.innerText = "Negative (Extraction)";
+                broiDisplay.style.color = "#ff0000";
+                animusMaterial.color.setHex(0xffffff); // Standard white
+            }
+
+            // WASD Movement
+            if (keys.w) animus.position.z -= currentSpeed;
+            if (keys.s) animus.position.z += currentSpeed;
+            if (keys.a) animus.position.x -= currentSpeed;
+            if (keys.d) animus.position.x += currentSpeed;
+
+            // Elevation (Space = Up, Shift = Down)
+            if (keys.space && animus.position.y < 5.5) animus.position.y += 0.2;
+            if (keys.shift && animus.position.y > 0.5) animus.position.y -= 0.2;
+
+            // Keep camera following the Animus
+            camera.position.x = animus.position.x;
+            camera.position.z = animus.position.z + 10;
+            camera.position.y = animus.position.y + 2;
+            camera.lookAt(animus.position);
+
+            renderer.render(scene, camera);
+        }
+
+        // Handle Window Resize
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        });
+
+        // Start Loop
+        animate();
+    </script>
+</body>
+</html>
