@@ -14,7 +14,7 @@ DEFAULT_BUILD_MENU_ENTRY: Final[dict[str, str]] = {
 
 
 def ensure_world_schema(connection: sqlite3.Connection) -> None:
-    """Create the shared world tables required by mesh and HUD scripts."""
+    """Create shared world tables; callers remain responsible for committing."""
 
     connection.execute(
         """
@@ -54,14 +54,14 @@ def insert_build_menu_item_if_missing(
 
 
 def ensure_default_build_menu_entry(connection: sqlite3.Connection) -> bool:
-    """Ensure the default WebRTC mesh build item exists and report if it was inserted."""
+    """Ensure the default build item exists; callers still manage transaction commits."""
 
     ensure_world_schema(connection)
     return insert_build_menu_item_if_missing(connection, **DEFAULT_BUILD_MENU_ENTRY)
 
 
 def fetch_first_build_menu_item(connection: sqlite3.Connection) -> str | None:
-    """Return the oldest build menu item name, or None when the menu is empty."""
+    """Return the oldest build item name, or None when the menu is empty."""
 
     ensure_world_schema(connection)
     row = connection.execute(

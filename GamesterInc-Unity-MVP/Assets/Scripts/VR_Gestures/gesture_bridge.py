@@ -4,14 +4,22 @@ from os import getenv
 from pathlib import Path
 
 
+def _looks_like_repo_root(candidate: Path) -> bool:
+    return (candidate / "master_config.yaml").exists() and (
+        candidate / "game_engine"
+    ).is_dir()
+
+
 def _resolve_repo_root() -> Path:
     current = Path(__file__).resolve()
     for candidate in current.parents:
-        if (candidate / ".git").exists():
+        if (candidate / ".git").exists() and _looks_like_repo_root(candidate):
             return candidate
     configured_root = getenv("ETERNIUS_REPO_ROOT")
     if configured_root:
-        return Path(configured_root).resolve()
+        resolved_root = Path(configured_root).resolve()
+        if _looks_like_repo_root(resolved_root):
+            return resolved_root
     raise RuntimeError(
         "Unable to locate repository root from gesture bridge path. "
         "Set ETERNIUS_REPO_ROOT when .git metadata is unavailable."
