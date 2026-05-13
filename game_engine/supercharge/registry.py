@@ -28,4 +28,6 @@ class ComponentRegistry:
             error_details = ", ".join(
                 f"{name}: {error}" for name, error in errors
             )
-            raise RuntimeError(f"One or more components failed to stop: {error_details}")
+            raise RuntimeError(
+                f"{len(errors)} of {len(self.components)} components failed to stop: {error_details}"
+            )

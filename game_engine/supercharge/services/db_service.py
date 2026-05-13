@@ -20,6 +20,8 @@ class DatabaseService:
             try:
                 self.connection.close()
             except sqlite3.Error as exc:
-                raise RuntimeError("Failed to close SQLite connection cleanly") from exc
+                raise RuntimeError(
+                    f"Failed to close SQLite connection to {self.db_path}: {type(exc).__name__}: {exc}"
+                ) from exc
             finally:
                 self.connection = None
