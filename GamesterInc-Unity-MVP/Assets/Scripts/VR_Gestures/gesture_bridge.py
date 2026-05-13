@@ -3,6 +3,8 @@ import sys
 from os import getenv
 from pathlib import Path
 
+MIN_REPO_MARKERS = 2
+
 
 def _looks_like_repo_root(candidate: Path) -> bool:
     markers = (
@@ -10,7 +12,7 @@ def _looks_like_repo_root(candidate: Path) -> bool:
         (candidate / "README.md").exists(),
         (candidate / "game_engine").is_dir(),
     )
-    return sum(markers) >= 2
+    return sum(markers) >= MIN_REPO_MARKERS
 
 
 def _resolve_repo_root() -> Path:
@@ -26,8 +28,9 @@ def _resolve_repo_root() -> Path:
         if _looks_like_repo_root(resolved_root):
             return resolved_root
     raise RuntimeError(
-        "Unable to locate repository root from gesture bridge path. "
-        "Set ETERNIUS_REPO_ROOT when .git metadata is unavailable."
+        "Unable to locate repository root. "
+        "Set the ETERNIUS_REPO_ROOT environment variable to the absolute path "
+        "of the repository root."
     )
 
 

@@ -1,8 +1,41 @@
 ﻿import sqlite3
 import sys
+from os import getenv
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+MIN_REPO_MARKERS = 2
+
+
+def _resolve_repo_root() -> Path:
+    current = Path(__file__).resolve()
+    for candidate in current.parents:
+        markers = (
+            (candidate / "master_config.yaml").exists(),
+            (candidate / "README.md").exists(),
+            (candidate / "game_engine").is_dir(),
+        )
+        if sum(markers) >= MIN_REPO_MARKERS:
+            return candidate
+
+    configured_root = getenv("ETERNIUS_REPO_ROOT")
+    if configured_root:
+        resolved_root = Path(configured_root).resolve()
+        markers = (
+            (resolved_root / "master_config.yaml").exists(),
+            (resolved_root / "README.md").exists(),
+            (resolved_root / "game_engine").is_dir(),
+        )
+        if sum(markers) >= MIN_REPO_MARKERS:
+            return resolved_root
+
+    raise RuntimeError(
+        "Unable to locate repository root. "
+        "Set the ETERNIUS_REPO_ROOT environment variable to the absolute path "
+        "of the repository root."
+    )
+
+
+REPO_ROOT = _resolve_repo_root()
 if str(REPO_ROOT) not in sys.path:
     sys.path.append(str(REPO_ROOT))
 
