@@ -1,4 +1,4 @@
-"""Google-backed enterprise AI service with local fallback behavior."""
+"""Local-first enterprise AI service with optional Google AI enrichment."""
 
 from __future__ import annotations
 
@@ -138,7 +138,7 @@ class EnterpriseAIService:
         return (
             "You are an enterprise operations copilot for the Eternius KONG Engine. "
             "Write a concise executive briefing in 2-4 sentences. Focus on field safety, "
-            "edge resilience, and next actions. Avoid markdown. Never ask for raw telemetry.\n"
+            "edge resilience, and next actions. Avoid markdown. Base the briefing only on the redacted telemetry profile.\n"
             f"Payload: {json.dumps(payload, sort_keys=True)}"
         )
 
