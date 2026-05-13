@@ -27,7 +27,7 @@ def ensure_world_schema(connection: sqlite3.Connection) -> None:
     )
 
 
-def upsert_build_menu_item(
+def insert_build_menu_item_if_missing(
     connection: sqlite3.Connection,
     *,
     item_name: str,
@@ -51,7 +51,7 @@ def upsert_build_menu_item(
 
 def ensure_default_build_menu_entry(connection: sqlite3.Connection) -> bool:
     ensure_world_schema(connection)
-    return upsert_build_menu_item(connection, **DEFAULT_BUILD_MENU_ENTRY)
+    return insert_build_menu_item_if_missing(connection, **DEFAULT_BUILD_MENU_ENTRY)
 
 
 def fetch_first_build_menu_item(connection: sqlite3.Connection) -> str | None:

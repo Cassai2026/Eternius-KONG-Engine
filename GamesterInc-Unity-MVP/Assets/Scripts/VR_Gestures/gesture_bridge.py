@@ -2,7 +2,16 @@
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
+
+def _resolve_repo_root() -> Path:
+    current = Path(__file__).resolve()
+    for candidate in current.parents:
+        if (candidate / ".git").exists():
+            return candidate
+    raise RuntimeError("Unable to locate repository root from gesture bridge path")
+
+
+REPO_ROOT = _resolve_repo_root()
 if str(REPO_ROOT) not in sys.path:
     sys.path.append(str(REPO_ROOT))
 
