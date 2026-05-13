@@ -2,6 +2,8 @@
 
 import sqlite3
 
+from ..world_schema import ensure_world_schema
+
 
 class DatabaseService:
     def __init__(self, db_path: str, enable_concurrent_access: bool = False) -> None:
@@ -14,6 +16,7 @@ class DatabaseService:
             self.db_path,
             check_same_thread=not self.enable_concurrent_access,
         )
+        ensure_world_schema(self.connection)
 
     def stop(self) -> None:
         if self.connection is not None:

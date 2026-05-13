@@ -5,3 +5,4 @@ Temp/
 Obj/
 *.csproj
 *.sln
+*.db
