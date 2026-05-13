@@ -2,6 +2,7 @@
 
 from .registry import ComponentRegistry
 from .services.db_service import DatabaseService
+from .services.enterprise_ai_service import EnterpriseAIService
 from .systems.achievement_system import AchievementSystem
 from .systems.build_system import BuildSystem
 from .systems.learning_system import LearningSystem
@@ -13,6 +14,7 @@ from .systems.safety_system import SafetySystem
 def build_default_runtime(db_path: str = "enki_knowledge.db") -> ComponentRegistry:
     registry = ComponentRegistry()
     registry.register("database", DatabaseService(db_path))
+    registry.register("enterprise_ai", EnterpriseAIService())
     registry.register("resources", ResourceSystem())
     registry.register("build", BuildSystem())
     registry.register("network", NetworkSystem())
