@@ -17,5 +17,9 @@ class DatabaseService:
 
     def stop(self) -> None:
         if self.connection is not None:
-            self.connection.close()
-            self.connection = None
+            try:
+                self.connection.close()
+            except sqlite3.Error:
+                pass
+            finally:
+                self.connection = None

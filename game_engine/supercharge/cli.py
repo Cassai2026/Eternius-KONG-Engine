@@ -12,7 +12,10 @@ def main() -> None:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        runtime.stop_all()
+        try:
+            runtime.stop_all()
+        except RuntimeError as exc:
+            print(f"Shutdown completed with errors: {exc}")
 
 
 if __name__ == "__main__":
