@@ -16,6 +16,12 @@ def init_webrtc_mesh(db_path: str = "enki_knowledge.db") -> dict[str, str]:
     """
     Initializes the Spider-Web P2P Handshake Protocol.
     Ensures Oakley HUDs communicate via decentralized WebRTC.
+
+    Args:
+        db_path: SQLite database path for the shared world state.
+
+    Returns:
+        The active handshake configuration pushed to the HUD.
     """
     conn = sqlite3.connect(db_path)
     try:
